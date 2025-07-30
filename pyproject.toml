@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eqx_marl"
+version = "0.0.1"
+description = ""
+authors = [
+    { name = "John Viljoen", email = "johnviljoen2@gmail.com" },
+]
+
+readme = "README.md"
+# keywords = ["quadcopter", "nonlinear control"]
+
+dependencies = [
+    "matplotlib",
+    "tqdm",
+    "jax",
+    "equinox",
+    "distreqx",
+    "brax"
+]
+
+[tool.setuptools.packages.find]
+where = [
+    "src"
+]  # list of folders that contain the packages (["."] by default)
+
