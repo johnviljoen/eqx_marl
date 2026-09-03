@@ -79,7 +79,6 @@ def _merge(target: Any, source: Any) -> Any:
     # ── leaf value ────────────────────────────────────────────────────
     return source
 
-
 def generate_and_validate_vmap_clp_rollout(env, rng, num_envs=100, jit=True, num_timesteps=1000):
     """
     This function will roll out a bunch of environments in parallel in closed loop,
@@ -245,8 +244,6 @@ def validate_eqx_against_flax_clp_rollout(eqx_env, flx_env, rng, jit=True, num_t
     print(f"flax length std:    {flx_lengths.std()}")
 
     pass
-
-
 
 
 def vmap_eqx_vs_flx(eqx_env, flx_env, rng, num_envs=100, jit=True, num_timesteps=1000):
