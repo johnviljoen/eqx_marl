@@ -46,3 +46,23 @@ def filter_scan(f, init, xs, length=None, reverse=False, unroll=1):
 
 
 
+
+
+def filter_cond(pred, true_fn, false_fn, *operands):
+    """
+    lax.cond over pytrees that may contain non-array leaves (e.g. eqx.Modules with
+    static fields). Non-array leaves are closed over and must be the same in both branches.
+    """
+    dynamic, static = eqx.partition(operands, eqx.is_array)
+
+    def _true(d):
+        out = true_fn(*eqx.combine(d, static))
+        return eqx.partition(out, eqx.is_array)[0]
+
+    def _false(d):
+        out = false_fn(*eqx.combine(d, static))
+        return eqx.partition(out, eqx.is_array)[0]
+
+    out_static = eqx.partition(false_fn(*operands), eqx.is_array)[1]
+    out_dynamic = jax.lax.cond(pred, _true, _false, dynamic)
+    return eqx.combine(out_dynamic, out_static)

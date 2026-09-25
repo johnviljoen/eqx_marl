@@ -41,6 +41,7 @@ def make_train(env, config, rng_init):
     save_path = f'data/eqx_ppo_mk2_validation/{current_datetime}'
     os.makedirs(save_path, exist_ok=False)
     writer = SummaryWriter(log_dir=save_path)
+    config["SAVE_PATH"] = save_path
     with open(os.path.join(save_path, 'config.json'), 'w') as f:
         json.dump(config, f, indent=4)
 
@@ -394,3 +395,8 @@ if __name__ == "__main__":
     out = train_jit(rng)
 
     print("INFO: training complete")
+
+    # save the final networks; reload with eqx.tree_deserialise_leaves(path, (Actor(...), Critic(...)))
+    actor_network, _, critic_network, _ = out["runner_state"][0]
+    eqx.tree_serialise_leaves(os.path.join(config["SAVE_PATH"], "checkpoint.eqx"), (actor_network, critic_network))
+    print(f"INFO: saved checkpoint to {config['SAVE_PATH']}")

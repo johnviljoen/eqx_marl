@@ -18,7 +18,8 @@ dependencies = [
     "jax",
     "equinox",
     "distreqx",
-    "brax"
+    "brax",
+    "kaneqx"
 ]
 
 [tool.setuptools.packages.find]

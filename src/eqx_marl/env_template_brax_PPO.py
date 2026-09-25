@@ -52,7 +52,7 @@ class YourEnv(PipelineEnv):
         self,
 
         # base env settings
-        xml_path='MARL_resources/demo.xml',
+        xml_path=os.path.join(os.path.dirname(__file__), 'assets/demo.xml'),
         backend='positional', # this is important for the ant
         ctrl_cost_weight=0.5,
         use_contact_forces=False,

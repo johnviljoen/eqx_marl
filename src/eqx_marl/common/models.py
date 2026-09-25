@@ -411,3 +411,78 @@ if __name__ == "__main__":
     print("mean|Δ sample | :", jnp.mean(jnp.abs(flax_samp - eqx_samp)))
 
 
+
+
+# ============================================================================ #
+# KAN actor / critic, built on kaneqx (https://github.com/johnviljoen/kaneqx)   #
+# ============================================================================ #
+
+from kaneqx import KAN
+
+
+class KANActor(eqx.Module):
+    """
+    Gaussian policy whose mean is a Kolmogorov-Arnold network. Same interface as Actor:
+    __call__(obs: (obs_dim,)) -> (mean, scale). The last layer's spline and residual
+    coefficients are scaled down so the initial policy is near zero-mean, mirroring the
+    orthogonal(0.01) init of the MLP actor.
+    """
+
+    kan: KAN
+    log_std: jax.Array
+
+    def __init__(
+        self,
+        key: jr.PRNGKey,
+        layer_sizes: List[int],
+        k: int = 3,
+        G: int = 3,
+        grid_range: Tuple[float, float] = (-3.0, 3.0),
+        last_layer_scale: float = 0.01,
+        **kan_kwargs,
+    ):
+        kan = KAN(layer_sizes, key, k=k, G=G, grid_range=grid_range, **kan_kwargs)
+        self.kan = _scale_last_layer(kan, last_layer_scale)
+        self.log_std = jnp.zeros((layer_sizes[-1],))
+
+    def __call__(self, x: jax.Array) -> Tuple[jax.Array, jax.Array]:
+        return self.kan(x), jnp.exp(self.log_std)
+
+    def update_grids(self, x, G_new: int) -> "KANActor":
+        """x: (batch, obs_dim) normalized observations."""
+        return eqx.tree_at(lambda a: a.kan, self, self.kan.update_grids(x, G_new))
+
+
+class KANCritic(eqx.Module):
+    """Value function as a Kolmogorov-Arnold network. __call__(obs: (obs_dim,)) -> scalar."""
+
+    kan: KAN
+
+    def __init__(
+        self,
+        key: jr.PRNGKey,
+        layer_sizes: List[int],
+        k: int = 3,
+        G: int = 3,
+        grid_range: Tuple[float, float] = (-3.0, 3.0),
+        last_layer_scale: float = 1.0,
+        **kan_kwargs,
+    ):
+        kan = KAN(layer_sizes, key, k=k, G=G, grid_range=grid_range, **kan_kwargs)
+        self.kan = _scale_last_layer(kan, last_layer_scale)
+
+    def __call__(self, x: jax.Array) -> jax.Array:
+        return self.kan(x)[0]
+
+    def update_grids(self, x, G_new: int) -> "KANCritic":
+        return eqx.tree_at(lambda c: c.kan, self, self.kan.update_grids(x, G_new))
+
+
+def _scale_last_layer(kan: KAN, scale: float) -> KAN:
+    if scale == 1.0:
+        return kan
+    last = kan.layers[-1]
+    kan = eqx.tree_at(lambda m: m.layers[-1].c_basis, kan, last.c_basis * scale)
+    if last.c_res is not None:
+        kan = eqx.tree_at(lambda m: m.layers[-1].c_res, kan, last.c_res * scale)
+    return kan
